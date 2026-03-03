@@ -1,0 +1,140 @@
+// Prisma Schema for Medium Bot Manager
+// https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Users (app admins)
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  passwordHash  String
+  name          String?
+  role          UserRole  @default(USER)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  mediumAccounts MediumAccount[]
+  articles      Article[]
+  postLogs      PostLog[]
+  
+  @@map("users")
+}
+
+enum UserRole {
+  USER
+  ADMIN
+}
+
+// Medium Accounts
+model MediumAccount {
+  id            String    @id @default(cuid())
+  userId        String
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accountName   String
+  mediumUsername String?
+  sessionToken  String?   @db.Text
+  cookies       Json?
+  status        AccountStatus @default(ACTIVE)
+  lastUsedAt    DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  articles      Article[]
+  postLogs      PostLog[]
+  publications  Publication[]
+  
+  @@map("medium_accounts")
+}
+
+enum AccountStatus {
+  ACTIVE
+  INACTIVE
+  BANNED
+  EXPIRED
+}
+
+// Articles
+model Article {
+  id            String        @id @default(cuid())
+  userId        String
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  mediumAccountId String?
+  mediumAccount MediumAccount? @relation(fields: [mediumAccountId], references: [id], onDelete: SetNull)
+  title         String
+  subtitle      String?
+  content       String        @db.Text
+  markdown      String?       @db.Text
+  tags          Json?
+  canonicalUrl  String?
+  status        ArticleStatus @default(DRAFT)
+  scheduledAt   DateTime?
+  publishedAt   DateTime?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  postLogs      PostLog[]
+  
+  @@map("articles")
+}
+
+enum ArticleStatus {
+  DRAFT
+  SCHEDULED
+  PUBLISHING
+  PUBLISHED
+  FAILED
+}
+
+// Publications
+model Publication {
+  id              String    @id @default(cuid())
+  mediumAccountId String
+  mediumAccount   MediumAccount @relation(fields: [mediumAccountId], references: [id], onDelete: Cascade)
+  pubId           String
+  pubName         String
+  pubSlug         String
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  @@map("publications")
+}
+
+// Post Logs
+model PostLog {
+  id              String    @id @default(cuid())
+  articleId       String
+  article         Article   @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  mediumAccountId String
+  mediumAccount   MediumAccount @relation(fields: [mediumAccountId], references: [id], onDelete: Cascade)
+  publicationId   String?
+  status          PostStatus
+  errorMessage    String?   @db.Text
+  mediumPostId    String?
+  mediumUrl       String?
+  postedAt        DateTime  @default(now())
+  userId          String?
+  user            User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  
+  @@map("post_logs")
+}
+
+enum PostStatus {
+  SUCCESS
+  FAILED
+  PENDING
+  RETRYING
+}
+
+// Settings
+model Setting {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     String   @db.Text
+  updatedAt DateTime @updatedAt
+  
+  @@map("settings")
+}
