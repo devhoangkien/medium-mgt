@@ -30,6 +30,9 @@
             <NuxtLink to="/settings" class="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white px-3 py-2 rounded-md text-sm font-medium">
               Settings
             </NuxtLink>
+            <button @click="handleLogout" class="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 px-3 py-2 rounded-md text-sm font-medium">
+              Logout
+            </button>
           </nav>
         </div>
       </div>
@@ -52,5 +55,11 @@
 </template>
 
 <script setup lang="ts">
-// Layout setup
+const router = useRouter()
+
+const handleLogout = () => {
+  const tokenCookie = useCookie('auth_token')
+  tokenCookie.value = null
+  router.push('/auth/login')
+}
 </script>

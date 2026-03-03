@@ -15,7 +15,7 @@ RUN apk add --no-cache \
 FROM base AS deps
 WORKDIR /app
 COPY package.json package-lock.json* ./
-RUN npm ci
+RUN npm ci --legacy-peer-deps
 
 # Build application
 FROM base AS builder

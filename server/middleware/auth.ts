@@ -3,34 +3,49 @@ import jwt from 'jsonwebtoken'
 import prisma from '~/server/utils/prisma'
 
 export default defineEventHandler(async (event: H3Event) => {
-  // Skip auth for public routes
+  const url = event.path
+
+  // Middleware auth chỉ chạy cho các endpoint API, bỏ qua frontend và assets
+  if (!url.startsWith('/api/')) {
+    return
+  }
+
+  // Bỏ qua các public API
   const publicRoutes = [
     '/api/auth/login',
     '/api/auth/register',
     '/api/health'
   ]
 
-  const url = event.path
   if (publicRoutes.some(route => url.startsWith(route))) {
     return
   }
 
   // Get token from header
   const authHeader = getHeader(event, 'authorization')
-  
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+  let token = ''
+
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    token = authHeader.substring(7)
+  } else {
+    // Fall back to reading token from cookie
+    const cookieToken = getCookie(event, 'auth_token')
+    if (cookieToken) {
+      token = cookieToken
+    }
+  }
+
+  if (!token) {
     throw createError({
       statusCode: 401,
       message: 'Unauthorized: No token provided'
     })
   }
 
-  const token = authHeader.substring(7) // Remove 'Bearer ' prefix
-
   try {
     // Verify token
     const decoded = jwt.verify(
-      token, 
+      token,
       process.env.JWT_SECRET || 'fallback-secret'
     ) as { userId: string; email: string }
 
@@ -56,7 +71,7 @@ export default defineEventHandler(async (event: H3Event) => {
     event.context.user = user
   } catch (error) {
     console.error('Auth middleware error:', error)
-    
+
     if (error instanceof jwt.JsonWebTokenError || error instanceof jwt.TokenExpiredError) {
       throw createError({
         statusCode: 401,

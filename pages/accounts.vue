@@ -161,15 +161,17 @@ const addAccount = async () => {
   error.value = ''
   
   try {
-    // TODO: API call to add account
-    console.log('Adding account:', newAccount.value)
-    await new Promise(resolve => setTimeout(resolve, 1000))
+    const response = await $fetch('/api/accounts', {
+      method: 'POST',
+      body: newAccount.value
+    })
     
     showAddModal.value = false
     newAccount.value = { accountName: '', cookies: '' }
     // Refresh accounts list
+    await fetchAccounts()
   } catch (err: any) {
-    error.value = err.message || 'Failed to add account'
+    error.value = err.data?.message || err.message || 'Failed to add account'
   } finally {
     loading.value = false
   }
@@ -206,8 +208,16 @@ const formatDate = (date: string | null) => {
   return new Date(date).toLocaleString('vi-VN')
 }
 
+const fetchAccounts = async () => {
+  try {
+    const data = await $fetch<any[]>('/api/accounts')
+    accounts.value = data
+  } catch (err) {
+    console.error('Error fetching accounts:', err)
+  }
+}
+
 onMounted(() => {
-  // TODO: Fetch accounts from API
-  // accounts.value = await $fetch('/api/accounts')
+  fetchAccounts()
 })
 </script>

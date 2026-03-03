@@ -11,6 +11,11 @@ const registerSchema = z.object({
 })
 
 export default defineEventHandler(async (event: H3Event) => {
+  throw createError({
+    statusCode: 403,
+    message: 'Registration is temporarily disabled'
+  });
+
   try {
     const body = await readBody(event)
     const validated = registerSchema.parse(body)
@@ -43,9 +48,9 @@ export default defineEventHandler(async (event: H3Event) => {
 
     // Generate JWT token
     const token = jwt.sign(
-      { 
-        userId: user.id, 
-        email: user.email 
+      {
+        userId: user.id,
+        email: user.email
       },
       process.env.JWT_SECRET || 'fallback-secret',
       { expiresIn: '7d' }
@@ -63,7 +68,7 @@ export default defineEventHandler(async (event: H3Event) => {
     }
   } catch (error) {
     console.error('Register error:', error)
-    
+
     if (error instanceof z.ZodError) {
       throw createError({
         statusCode: 400,
