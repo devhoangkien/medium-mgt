@@ -78,12 +78,38 @@
                 </label>
               </div>
 
+              <div class="flex items-center">
+                <input
+                  v-model="enableAutoPost"
+                  type="checkbox"
+                  id="autopost"
+                  class="w-4 h-4 text-green-600 rounded"
+                  :disabled="!enableRewrite"
+                />
+                <label for="autopost" class="ml-2 text-sm text-gray-700">
+                  📤 Auto-post lên Medium
+                </label>
+              </div>
+
+              <div v-if="enableAutoPost" class="space-y-2">
+                <label class="block text-sm font-medium text-gray-700">Medium Account</label>
+                <select v-model="selectedMediumAccount" class="w-full px-3 py-2 border rounded-lg">
+                  <option value="">-- Chọn tài khoản --</option>
+                  <option v-for="acc in mediumAccounts" :key="acc.id" :value="acc.id">
+                    {{ acc.accountName }} ({{ acc.mediumUsername || 'No username' }})
+                  </option>
+                </select>
+                <p class="text-xs text-orange-600">
+                  ⚠️ Chỉ dùng cho testing! Auto-post có thể vi phạm Medium TOS.
+                </p>
+              </div>
+
               <button
                 type="submit"
                 :disabled="loading"
                 class="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 disabled:opacity-50"
               >
-                {{ loading ? 'Đang crawl...' : '🚀 Crawl Ngay' }}
+                {{ loading ? 'Đang xử lý...' : enableAutoPost ? '🚀 Crawl + Auto-Post' : '🚀 Crawl Ngay' }}
               </button>
             </form>
           </div>
@@ -357,6 +383,9 @@ const quickUrl = ref('')
 const enableRewrite = ref(true)
 const rewriteStyle = ref('blog')
 const rewriteLanguage = ref('zh')
+const enableAutoPost = ref(false)
+const selectedMediumAccount = ref('')
+const mediumAccounts = ref([])
 const sources = ref([])
 const jobs = ref([])
 const selectedJob = ref(null)
@@ -398,32 +427,58 @@ async function loadJobs() {
 async function quickCrawl() {
   if (!quickUrl.value) return
   
+  if (enableAutoPost.value && !selectedMediumAccount.value) {
+    alert('⚠️ Please select a Medium account for auto-post!')
+    return
+  }
+  
   loading.value = true
   try {
-    const res = await fetch('/api/crawl', {
+    const endpoint = enableAutoPost.value ? '/api/crawl-auto' : '/api/crawl'
+    
+    const res = await fetch(endpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         url: quickUrl.value,
         rewrite: enableRewrite.value,
         rewriteStyle: rewriteStyle.value,
-        rewriteLanguage: rewriteLanguage.value
+        rewriteLanguage: rewriteLanguage.value,
+        autoPost: enableAutoPost.value,
+        mediumAccountId: selectedMediumAccount.value || null
       })
     })
     
     const data = await res.json()
     
     if (data.success) {
-      alert('✅ Crawl job started! Check the list below.')
+      alert(enableAutoPost.value 
+        ? '✅ Crawl + Auto-post started! Check progress below.' 
+        : '✅ Crawl job started! Check the list below.')
       quickUrl.value = ''
       setTimeout(loadJobs, 2000)
     } else {
       alert('❌ Error: ' + data.message)
     }
   } catch (err) {
-    alert('❌ Failed to start crawl: ' + err.message)
+    alert('❌ Failed: ' + err.message)
   } finally {
     loading.value = false
+  }
+}
+
+async function loadMediumAccounts() {
+  try {
+    const res = await fetch('/api/accounts')
+    const data = await res.json()
+    mediumAccounts.value = data.data || []
+    
+    // Select first account if available
+    if (mediumAccounts.value.length > 0) {
+      selectedMediumAccount.value = mediumAccounts.value[0].id
+    }
+  } catch (err) {
+    console.error('Failed to load Medium accounts:', err)
   }
 }
 
@@ -502,6 +557,7 @@ function createArticle(job) {
 onMounted(() => {
   loadSources()
   loadJobs()
+  loadMediumAccounts()
   
   // Refresh every 10 seconds if there are running jobs
   const interval = setInterval(() => {
