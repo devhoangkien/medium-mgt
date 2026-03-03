@@ -22,6 +22,7 @@ model User {
   mediumAccounts MediumAccount[]
   articles      Article[]
   postLogs      PostLog[]
+  crawlSources  CrawlSource[]
   
   @@map("users")
 }
@@ -127,6 +128,43 @@ enum PostStatus {
   FAILED
   PENDING
   RETRYING
+}
+
+// Crawl Sources
+model CrawlSource {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name        String
+  url         String
+  selector    String?  // CSS selector for articles
+  config      Json?    // Crawl config (headers, delay, etc.)
+  status      String   @default("ACTIVE") // ACTIVE, INACTIVE
+  lastCrawled DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  crawlJobs   CrawlJob[]
+
+  @@map("crawl_sources")
+}
+
+// Crawl Jobs
+model CrawlJob {
+  id          String   @id @default(cuid())
+  sourceId    String
+  source      CrawlSource @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+  url         String
+  status      String   @default("PENDING") // PENDING, RUNNING, COMPLETED, FAILED
+  rawContent  String?  @db.Text
+  rewrittenContent String? @db.Text
+  openclawSessionId String?
+  openclawResponse String? @db.Text
+  error       String?
+  startedAt   DateTime?
+  completedAt DateTime?
+  createdAt   DateTime @default(now())
+
+  @@map("crawl_jobs")
 }
 
 // Settings

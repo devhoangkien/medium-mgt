@@ -24,6 +24,9 @@
             <NuxtLink to="/schedule" class="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white px-3 py-2 rounded-md text-sm font-medium">
               Schedule
             </NuxtLink>
+            <NuxtLink to="/crawl" class="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white px-3 py-2 rounded-md text-sm font-medium">
+              🕷️ Crawl
+            </NuxtLink>
             <NuxtLink to="/settings" class="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white px-3 py-2 rounded-md text-sm font-medium">
               Settings
             </NuxtLink>
